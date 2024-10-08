@@ -1,0 +1,52 @@
+version: '3'
+
+tasks:
+  install-kubelogin:
+    cmds:
+      - if ! command -v kubelogin &> /dev/null; then
+          echo "kubelogin not found. Installing...";
+          sudo az aks install-cli;
+        else
+          echo "kubelogin is already installed.";
+        fi
+    silent: true
+  kubeadminaccess:
+    deps:
+      - install-kubelogin
+    cmds:
+      - echo "Configuring kubectl..."
+      - az aks get-credentials --resource-group rg-entra-id-users --name aks-entra-id-users --overwrite-existing --admin
+      - echo "Configuration completed successfully."
+    silent: true
+  kubeuseraccess:
+    deps:
+      - install-kubelogin
+    cmds:
+      - echo "Configuring kubectl..."
+      - az aks get-credentials --resource-group rg-entra-id-users --name aks-entra-id-users --overwrite-existing
+      - echo "Configuration completed successfully."
+    silent: true
+  fe:
+    deps:
+      - kubeadminaccess
+    cmds:
+      - echo "Creating frontend role binding, namespace and testing pod..."
+      - kubectl apply -f kube_manifests/frontend.yaml
+      - echo "Frontend resources created successfully."
+    silent: true
+  be:
+    deps:
+      - kubeadminaccess
+    cmds:
+      - echo "Creating backend role binding, namespace and testing pod..."
+      - kubectl apply -f kube_manifests/backend.yaml
+      - echo "Backend resources created successfully."
+    silent: true
+  do:
+    deps:
+      - kubeadminaccess
+    cmds:
+      - echo "Creating devops cluster role binding..."
+      - kubectl apply -f kube_manifests/devops.yaml
+      - echo "DevOps cluster role binding created successfully."
+    silent: true
